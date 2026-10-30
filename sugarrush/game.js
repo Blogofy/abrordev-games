@@ -148,7 +148,7 @@ const stage = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 // Avtomatik sifat: FPS'ga qarab ichki ruxsat o'zgaradi
 const PR_MAX = Math.min(window.devicePixelRatio || 1, 2);
-let pr = PR_MAX, prLocked = false; // to'liq tiniqlikda boshlanadi, faqat haqiqiy sekinlashishda pasayadi
+let pr = Math.min(PR_MAX, 1.5), prLocked = false; // tiniq boshlanadi; qurilma tortmasa adaptQuality tez pasaytiradi
 renderer.setPixelRatio(pr);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping; // ranglarni buzmasdan yorug' joylarni yumshatadi
@@ -1496,27 +1496,33 @@ function resize() {
   camera.aspect = w / h; camera.updateProjectionMatrix();
   glow.mat.uniforms.uScale.value = candy.mat.uniforms.uScale.value = puff.mat.uniforms.uScale.value = h * pr * 0.5;
 }
-// FPS kuzatuvchisi: haqiqiy sekinlashishda ruxsatni pasaytiradi, tiklanganda yana ko'taradi.
-// Brauzer kadrlarni ataylab cheklashi mumkin (masalan, Chrome'ning quvvat tejash rejimi 30 Hz qiladi) —
-// bu sekinlik emas, shuning uchun FPS shu chegaraga (eng tez kadrlar oralig'idan topiladi) nisbatan baholanadi.
-const PR_MIN = 0.75;
-const perf = { t: 0, dts: [], hold: 2, upBlock: 0, ceil: PR_MAX, good: 0 };
+// FPS kuzatuvchisi — silliqlik birinchi o'rinda: FPS 50 dan tushsa ruxsat kerakli darajagacha pasayadi,
+// FPS yuqori bo'lsa asta-sekin oshadi. Har pasaytirish sinov: FPS oshmasa, demak sabab brauzer cheklovi
+// (masalan, Chrome'ning quvvat tejash rejimi 30 Hz qiladi) — xiralik befoyda, tiniqlik qaytariladi.
+const PR_MIN = 0.5;
+const perf = { t: 0, dts: [], hold: 2, upBlock: 0, ceil: PR_MAX, good: 0, trial: null, cap: 0 };
 function adaptQuality(rawDt) {
   if (prLocked || paused || document.hidden) return;
   perf.t += rawDt; if (rawDt > 0.002) perf.dts.push(rawDt);
   if (perf.t < 1) return;
-  const d = perf.dts.sort((a, b) => a - b), n = d.length;
+  const n = perf.dts.length, fps = n / perf.t;
   perf.t = 0; perf.dts = [];
-  if (perf.hold > 0 || n < 10) { if (perf.hold > 0) perf.hold--; return; }
-  const fps = n / d.reduce((a, b) => a + b, 0), cap = Math.min(240, 1 / d[Math.floor(n * 0.1)]), k = fps / cap;
+  if (perf.hold > 0 || n < 5) { if (perf.hold > 0) perf.hold--; return; }
   if (perf.upBlock > 0) perf.upBlock--;
-  if (k < 0.8 && pr > PR_MIN) {
-    perf.ceil = Math.max(PR_MIN, pr - 0.05); pr = Math.max(PR_MIN, Math.round((pr - 0.15) * 100) / 100);
-    perf.upBlock = 4; perf.good = 0; resize();
-  } else if (k > 0.93) {
-    // barqaror ishlasa, chegara asta-sekin to'liq tiniqlikkacha qaytadi
+  if (perf.trial) {
+    const tr = perf.trial; perf.trial = null;
+    if (fps < tr.fps * 1.12) { perf.cap = Math.max(perf.cap, fps); pr = tr.pr; perf.ceil = Math.max(perf.ceil, tr.pr); perf.hold = 1; perf.upBlock = 6; resize(); return; }
+  }
+  const slow = perf.cap ? fps < perf.cap * 0.85 : fps < 50;
+  if (slow && pr > PR_MIN) {
+    // piksellar soni ~ pr², shuning uchun kerakli ruxsat taxminan pr * sqrt(fps / 58)
+    perf.trial = { pr, fps };
+    perf.ceil = Math.max(PR_MIN, pr - 0.05);
+    pr = Math.max(PR_MIN, Math.min(pr - 0.05, Math.round(pr * clamp(Math.sqrt(fps / 58), 0.6, 0.9) * 100) / 100));
+    perf.good = 0; perf.upBlock = 5; perf.hold = 1; resize();
+  } else if (!slow && fps >= (perf.cap ? perf.cap * 0.95 : 57)) {
     if (++perf.good >= 8 && perf.ceil < PR_MAX) { perf.ceil = Math.min(PR_MAX, perf.ceil + 0.05); perf.good = 0; }
-    if (pr + 0.04 < perf.ceil && perf.upBlock === 0) { pr = Math.min(perf.ceil, Math.round((pr + 0.1) * 100) / 100); resize(); }
+    if (pr + 0.04 < perf.ceil && perf.upBlock === 0) { pr = Math.min(perf.ceil, Math.round((pr + 0.1) * 100) / 100); perf.upBlock = 2; resize(); }
   } else perf.good = 0;
 }
 

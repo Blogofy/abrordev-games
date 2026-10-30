@@ -148,7 +148,7 @@ const stage = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 // Avtomatik sifat: FPS'ga qarab ichki ruxsat o'zgaradi
 const PR_MAX = Math.min(window.devicePixelRatio || 1, 2);
-let pr = Math.min(PR_MAX, 1), prLocked = false;
+let pr = PR_MAX, prLocked = false; // to'liq tiniqlikda boshlanadi, faqat haqiqiy sekinlashishda pasayadi
 renderer.setPixelRatio(pr);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.NeutralToneMapping; // ranglarni buzmasdan yorug' joylarni yumshatadi
@@ -1485,7 +1485,7 @@ window.addEventListener('blur', () => { dragging = false; keys.l = keys.r = fals
 function setPaused(p) {
   if (paused === p) return;
   paused = p; $('pause').classList.toggle('hidden', !p);
-  if (p) { Snd.suspend(); dragging = false; } else { Snd.resume(); last = performance.now(); perf.t = perf.n = 0; }
+  if (p) { Snd.suspend(); dragging = false; } else { Snd.resume(); last = performance.now(); perf.t = 0; perf.dts = []; }
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPaused(true); });
 
@@ -1496,17 +1496,28 @@ function resize() {
   camera.aspect = w / h; camera.updateProjectionMatrix();
   glow.mat.uniforms.uScale.value = candy.mat.uniforms.uScale.value = puff.mat.uniforms.uScale.value = h * pr * 0.5;
 }
-// FPS kuzatuvchisi: sekin bo'lsa ruxsatni pasaytiradi, tez bo'lsa ko'taradi
-const perf = { t: 0, n: 0, hold: 2, upBlock: 0, ceil: PR_MAX }; // ceil: bir marta sekinlashgan darajadan yuqoriga qaytilmaydi
+// FPS kuzatuvchisi: haqiqiy sekinlashishda ruxsatni pasaytiradi, tiklanganda yana ko'taradi.
+// Brauzer kadrlarni ataylab cheklashi mumkin (masalan, Chrome'ning quvvat tejash rejimi 30 Hz qiladi) —
+// bu sekinlik emas, shuning uchun FPS shu chegaraga (eng tez kadrlar oralig'idan topiladi) nisbatan baholanadi.
+const PR_MIN = 0.75;
+const perf = { t: 0, dts: [], hold: 2, upBlock: 0, ceil: PR_MAX, good: 0 };
 function adaptQuality(rawDt) {
   if (prLocked || paused || document.hidden) return;
-  perf.t += rawDt; perf.n++;
+  perf.t += rawDt; if (rawDt > 0.002) perf.dts.push(rawDt);
   if (perf.t < 1) return;
-  const fps = perf.n / perf.t; perf.t = perf.n = 0;
-  if (perf.hold > 0) { perf.hold--; return; }
+  const d = perf.dts.sort((a, b) => a - b), n = d.length;
+  perf.t = 0; perf.dts = [];
+  if (perf.hold > 0 || n < 10) { if (perf.hold > 0) perf.hold--; return; }
+  const fps = n / d.reduce((a, b) => a + b, 0), cap = Math.min(240, 1 / d[Math.floor(n * 0.1)]), k = fps / cap;
   if (perf.upBlock > 0) perf.upBlock--;
-  if (fps < 50 && pr > 0.6) { perf.ceil = Math.max(0.6, Math.round((pr - 0.1) * 100) / 100); pr = Math.max(0.6, Math.round((pr - 0.15) * 100) / 100); perf.upBlock = 10; resize(); }
-  else if (fps > 58 && pr + 0.05 < perf.ceil && perf.upBlock === 0) { pr = Math.min(perf.ceil, Math.round((pr + 0.1) * 100) / 100); resize(); }
+  if (k < 0.8 && pr > PR_MIN) {
+    perf.ceil = Math.max(PR_MIN, pr - 0.05); pr = Math.max(PR_MIN, Math.round((pr - 0.15) * 100) / 100);
+    perf.upBlock = 4; perf.good = 0; resize();
+  } else if (k > 0.93) {
+    // barqaror ishlasa, chegara asta-sekin to'liq tiniqlikkacha qaytadi
+    if (++perf.good >= 8 && perf.ceil < PR_MAX) { perf.ceil = Math.min(PR_MAX, perf.ceil + 0.05); perf.good = 0; }
+    if (pr + 0.04 < perf.ceil && perf.upBlock === 0) { pr = Math.min(perf.ceil, Math.round((pr + 0.1) * 100) / 100); resize(); }
+  } else perf.good = 0;
 }
 
 function frame(now) {

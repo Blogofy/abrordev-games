@@ -1,0 +1,9 @@
+# Arxivlar va asl model to'plami (o'yin faqat sugarrush/models ichidagilarni ishlatadi)
+*.zip
+/models/
+
+# Tizim fayllari
+Thumbs.db
+desktop.ini
+.DS_Store
+node_modules/

@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Abrordev Games</title>
+<meta name="description" content="Original HTML5 games by Abrordev, built for YouTube Playables.">
+<style>
+  :root { --ink: #24204a; --sub: #6a6396; --card: #ffffff; --bg1: #6fc3ff; --bg2: #c9b6ff; --pink: #ff5fa2; --green: #06d6a0; --gold: #ffd23f; }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; min-height: 100vh; color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+    background: linear-gradient(160deg, var(--bg1) 0%, #9fb8ff 45%, var(--bg2) 100%) fixed; }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+  /* Fon bezaklari */
+  .sky { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .sky i { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, .55); filter: blur(1px); animation: drift linear infinite; }
+  @keyframes drift { from { transform: translateX(-20vw); } to { transform: translateX(120vw); } }
+
+  header.wrap { position: relative; z-index: 1; text-align: center; padding: 56px 16px 26px; }
+  .logo { font-size: clamp(54px, 11vw, 104px); font-weight: 900; letter-spacing: .01em; margin: 0; line-height: 1; color: #fff;
+    text-shadow: 0 .06em 0 #3a2f7a, .03em .03em 0 #3a2f7a, -.03em .03em 0 #3a2f7a, .03em -.03em 0 #3a2f7a, -.03em -.03em 0 #3a2f7a, 0 .14em .12em rgba(30, 20, 80, .35); }
+  .logo span { color: var(--gold); }
+  .tag { margin: 14px auto 0; max-width: 640px; font-size: clamp(17px, 2.4vw, 21px); font-weight: 700; color: #fff; text-shadow: 0 2px 0 rgba(40, 30, 100, .4); line-height: 1.4; }
+  .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 18px; }
+  .badge { background: rgba(255, 255, 255, .92); color: var(--ink); font-weight: 800; font-size: 14px; padding: 7px 14px; border-radius: 999px; box-shadow: 0 4px 0 rgba(40, 30, 100, .18); }
+
+  main { position: relative; z-index: 1; }
+  .games { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; padding: 18px 0 10px; }
+  .game { background: var(--card); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column;
+    box-shadow: 0 8px 0 rgba(40, 30, 100, .18), 0 18px 40px rgba(40, 30, 100, .22); transition: transform .2s; }
+  .game:hover { transform: translateY(-6px); }
+  .shot { position: relative; display: block; aspect-ratio: 9 / 13; overflow: hidden; background: #2b2560; }
+  .shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; transition: transform .4s; }
+  .game:hover .shot img { transform: scale(1.04); }
+  .shot .play { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(.9); width: 78px; height: 78px; border-radius: 50%;
+    background: rgba(255, 255, 255, .92); display: grid; place-items: center; opacity: 0; transition: opacity .2s, transform .2s; box-shadow: 0 8px 24px rgba(0, 0, 0, .3); }
+  .shot .play::after { content: ''; margin-left: 6px; border-left: 26px solid var(--ink); border-top: 16px solid transparent; border-bottom: 16px solid transparent; }
+  .game:hover .shot .play { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  .body { padding: 18px 20px 22px; display: flex; flex-direction: column; flex: 1; }
+  .body h2 { margin: 0; font-size: 28px; font-weight: 900; }
+  .genre { font-size: 13px; font-weight: 800; color: var(--sub); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+  .body p { margin: 10px 0 12px; line-height: 1.45; font-size: 15.5px; color: #3c3768; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .chips span { font-size: 12.5px; font-weight: 800; padding: 5px 10px; border-radius: 999px; background: #f0edff; color: #4a4180; }
+  .btn { margin-top: auto; display: block; text-align: center; text-decoration: none; font-weight: 900; font-size: 20px; color: #fff; padding: 13px 0 14px; border-radius: 999px;
+    transition: transform .08s, filter .15s; }
+  .btn:hover { filter: brightness(1.06); }
+  .btn:active { transform: translateY(3px); }
+  .g1 .btn { background: linear-gradient(#ff8cc0, #ff4f97); box-shadow: 0 6px 0 #c2306f; }
+  .g2 .btn { background: linear-gradient(#34f0bd, #06d6a0); box-shadow: 0 6px 0 #049e76; }
+  .g3 .btn { background: linear-gradient(#ffc24a, #ff9a1f); box-shadow: 0 6px 0 #c96d00; }
+
+  section.info { margin: 38px 0 0; background: rgba(255, 255, 255, .94); border-radius: 28px; padding: 28px 26px; box-shadow: 0 8px 0 rgba(40, 30, 100, .15); }
+  section.info h3 { margin: 0 0 16px; font-size: 26px; font-weight: 900; }
+  .grid2 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .feat { background: #f7f5ff; border-radius: 20px; padding: 16px 18px; }
+  .feat b { display: block; font-size: 17px; margin-bottom: 6px; }
+  .feat span { font-size: 14.5px; line-height: 1.45; color: #4a4478; }
+  table { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 8px; border-top: 1px solid #ebe7fb; }
+  th { color: var(--sub); font-size: 13px; text-transform: uppercase; letter-spacing: .05em; border-top: 0; }
+  td b { font-weight: 900; }
+
+  footer.wrap { position: relative; z-index: 1; text-align: center; color: #fff; font-weight: 700; padding: 34px 16px 40px; text-shadow: 0 1px 0 rgba(40, 30, 100, .4); font-size: 14px; line-height: 1.7; }
+  footer b { font-weight: 900; }
+
+  @media (max-width: 900px) { .games, .grid2 { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 620px) {
+    header.wrap { padding-top: 40px; }
+    .games, .grid2 { grid-template-columns: 1fr; }
+    .shot { aspect-ratio: 9 / 11; }
+    .shot .play { opacity: 1; transform: translate(-50%, -50%) scale(.85); }
+    section.info { padding: 22px 18px; }
+    table { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true">
+  <i style="width:220px;height:70px;top:12%;animation-duration:70s;animation-delay:-10s"></i>
+  <i style="width:160px;height:52px;top:34%;animation-duration:90s;animation-delay:-50s"></i>
+  <i style="width:260px;height:80px;top:62%;animation-duration:110s;animation-delay:-30s"></i>
+  <i style="width:140px;height:46px;top:82%;animation-duration:80s;animation-delay:-65s"></i>
+</div>
+
+<header class="wrap">
+  <h1 class="logo">Abror<span>dev</span></h1>
+  <p class="tag">Three original HTML5 games made for YouTube Playables — bright, quick to learn and full of motion. Play them right in your browser.</p>
+  <div class="badges">
+    <span class="badge">🎮 Playables SDK integrated</span>
+    <span class="badge">🌍 10 languages</span>
+    <span class="badge">📱 Touch, mouse &amp; keyboard</span>
+    <span class="badge">⚡ No external requests</span>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="games">
+    <article class="game g1">
+      <a class="shot" href="sugarrush/" aria-label="Play Sugar Rush"><img src="assets/shot-sugarrush.jpg" alt="Sugar Rush gameplay: a frog runs along a waffle track over a pink candy sea" loading="lazy"><span class="play"></span></a>
+      <div class="body">
+        <h2>Sugar Rush</h2>
+        <div class="genre">3D runner · levels</div>
+        <p>Outrun a chocolate flood across a candy world. Grab jelly cubes, stack them on your back and drop them to build bridges over the gaps. Climb the bonus stairs with what's left and reach the gift at the top.</p>
+        <div class="chips"><span>Endless levels</span><span>5 heroes</span><span>Upgrades shop</span><span>three.js</span></div>
+        <a class="btn" href="sugarrush/">Play Sugar Rush</a>
+      </div>
+    </article>
+
+    <article class="game g2">
+      <a class="shot" href="kite/" aria-label="Play Kite"><img src="assets/shot-kite.jpg" alt="Kite gameplay: a smiling kite flies over a neon city at night with a Ferris wheel" loading="lazy"><span class="play"></span></a>
+      <div class="body">
+        <h2>Kite</h2>
+        <div class="genre">One-touch flyer · journey</div>
+        <p>Hold to rise, release to glide. Fly a cheerful kite through five worlds: meadows, a sunset bay, snowy peaks, a neon city and a starry sky. Dodge storms and rivals, grab power-ups and complete missions.</p>
+        <div class="chips"><span>5 worlds</span><span>8 kites</span><span>Missions</span><span>Power-ups</span></div>
+        <a class="btn" href="kite/">Play Kite</a>
+      </div>
+    </article>
+
+    <article class="game g3">
+      <a class="shot" href="towerpals/" aria-label="Play Tower Pals"><img src="assets/shot-towerpals.jpg" alt="Tower Pals gameplay: cute animal blocks stacked by a crane on a sunny beach" loading="lazy"><span class="play"></span></a>
+      <div class="body">
+        <h2>Tower Pals</h2>
+        <div class="genre">Stacking puzzle · level map</div>
+        <p>Tap to drop the swinging pal from the crane and stack a wobbly tower up to the finish flag. Each chapter adds a twist — wind at the beach, a moving crane in the city, low gravity on the Moon.</p>
+        <div class="chips"><span>Level map</span><span>14 pals to unlock</span><span>3-star rating</span><span>5 chapters</span></div>
+        <a class="btn" href="towerpals/">Play Tower Pals</a>
+      </div>
+    </article>
+  </div>
+
+  <section class="info">
+    <h3>Built for YouTube Playables</h3>
+    <div class="grid2">
+      <div class="feat"><b>SDK ready</b><span>firstFrameReady, gameReady, cloud save (loadData / saveData), pause &amp; resume, audio toggle, language detection, sendScore and error logging.</span></div>
+      <div class="feat"><b>Instant play</b><span>Small bundles, no logins, no external links or network calls. All art and sound are generated in code or bundled.</span></div>
+      <div class="feat"><b>Everyone can play</b><span>English, Spanish, Portuguese, Russian, Uzbek, Turkish, Indonesian, French, German and Hindi. Portrait and landscape.</span></div>
+    </div>
+    <table>
+      <tr><th>Game</th><th>Tech</th><th>Bundle size</th></tr>
+      <tr><td><b>Sugar Rush</b></td><td>three.js (WebGL)</td><td>6.8 MB</td></tr>
+      <tr><td><b>Kite</b></td><td>Canvas 2D</td><td>0.17 MB</td></tr>
+      <tr><td><b>Tower Pals</b></td><td>Canvas 2D</td><td>0.13 MB</td></tr>
+    </table>
+  </section>
+</main>
+
+<footer class="wrap">
+  © 2026 <b>Abrordev</b> · All games designed and built by Abrordev.<br>
+  Sugar Rush uses 3D characters by Quaternius (CC0) and three.js (MIT license).
+</footer>
+</body>
+</html>

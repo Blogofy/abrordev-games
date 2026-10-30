@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Tower Pals</title>
+<!-- YouTube Playables SDK: o'yin kodidan oldin yuklanishi SHART -->
+<script src="https://www.youtube.com/game_api/v1"></script>
+<style>
+  :root { --ink: #23305c; --sub: #5a6fb0; --green: #51cf66; --green2: #2f9e44; --pink: #ff4d6d; --gold: #ffd23f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #8fd3ff; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif; }
+  body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #game { display: block; width: 100%; height: 100%; }
+  #ui { position: fixed; inset: 0; pointer-events: none; }
+  button { font: inherit; }
+
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; pointer-events: auto;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)); transition: opacity .25s, transform .25s; }
+  .screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; transform: scale(.97); }
+  .grow { flex: 1; }
+  .dim { background: rgba(20, 20, 60, .4); }
+
+  .star { display: inline-block; width: 1em; height: 1em; vertical-align: -.14em; margin: 0 .04em;
+    background: linear-gradient(#fff07a, #ffb703); clip-path: polygon(50% 0, 61.8% 35%, 98% 35.5%, 69% 57.5%, 79.5% 91.5%, 50% 71%, 20.5% 91.5%, 31% 57.5%, 2% 35.5%, 38.2% 35%); }
+  .star.off { background: rgba(35, 48, 92, .25); }
+
+  .topbar { width: 100%; max-width: 460px; display: flex; justify-content: flex-end; min-height: 44px; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; background: rgba(30, 30, 80, .45); color: #fff; font-weight: 900; font-size: 20px;
+    padding: 6px 14px 6px 10px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, .4); }
+
+  .logo { margin: 0; text-align: center; font-weight: 900; line-height: .95; font-size: min(96px, 18vw); }
+  .logo .w { display: block; white-space: nowrap; }
+  .logo span span { display: inline-block; animation: bob 2.4s ease-in-out infinite;
+    text-shadow: 0 .07em 0 #2c3166, .035em .035em 0 #2c3166, -.035em .035em 0 #2c3166, .035em -.03em 0 #2c3166, -.035em -.03em 0 #2c3166, 0 .16em .12em rgba(20, 20, 70, .3); }
+  @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-9px) rotate(4deg); } }
+  .sub { margin: 10px 0 18px; color: #fff; font-weight: 900; font-size: 21px; text-align: center; text-shadow: 0 2px 0 rgba(30, 30, 80, .5); }
+
+  .btn { pointer-events: auto; border: 0; cursor: pointer; font-weight: 900; color: #fff; border-radius: 999px; transition: transform .08s, filter .2s; }
+  .btn:active { transform: translateY(3px) scale(.98); }
+  .btn.play { width: 100%; max-width: 330px; font-size: 32px; padding: 12px 0 13px; background: linear-gradient(#7ee88f, #51cf66);
+    box-shadow: 0 7px 0 var(--green2), 0 12px 22px rgba(0, 60, 20, .3); text-shadow: 0 2px 0 rgba(20, 90, 30, .45); line-height: 1.05; }
+  .btn.play small { display: block; font-size: 16px; opacity: .9; }
+  .btn.pulse { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  .btn.ghost { font-size: 18px; padding: 10px 18px; background: rgba(30, 30, 80, .45); border: 2px solid rgba(255, 255, 255, .45); display: inline-flex; align-items: center; gap: 6px; }
+  .btn.ghost b { color: var(--gold); }
+  .btn.soft { font-size: 18px; padding: 10px 18px; background: #eaf2ff; color: var(--ink); box-shadow: 0 4px 0 #c9d8f5; display: inline-flex; align-items: center; gap: 6px; }
+  .shake { animation: shake .35s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+  .row { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 360px; margin-top: 16px; flex-wrap: wrap; }
+  .credit { font-size: 13px; font-weight: 800; color: rgba(255, 255, 255, .92); text-shadow: 0 1px 2px rgba(20, 40, 20, .6); letter-spacing: .03em; }
+  .credit b { color: #fff; }
+  .row2 { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+  .card { background: #fff; border-radius: 26px; width: 100%; max-width: 420px; color: var(--ink); position: relative; overflow: hidden;
+    box-shadow: 0 7px 0 rgba(20, 20, 70, .25), 0 14px 30px rgba(20, 20, 70, .25); padding: 22px 18px 18px; text-align: center; }
+  .stripe { position: absolute; left: 0; right: 0; top: 0; height: 10px; background: linear-gradient(90deg, #ffb04a 20%, #ff6fa3 20% 40%, #5fd068 40% 60%, #4fb3ff 60% 80%, #ffd23f 80%); }
+  .olabel { font-weight: 900; color: var(--sub); font-size: 15px; letter-spacing: .04em; text-transform: uppercase; margin-top: 4px; }
+  .wtitle { margin: 4px 0 6px; font-size: 32px; font-weight: 900; }
+  .stars3 { display: flex; justify-content: center; gap: 10px; margin: 4px 0 10px; }
+  .bigstar { width: 64px; height: 64px; display: inline-block; background: #dfe6f5;
+    clip-path: polygon(50% 0, 61.8% 35%, 98% 35.5%, 69% 57.5%, 79.5% 91.5%, 50% 71%, 20.5% 91.5%, 31% 57.5%, 2% 35.5%, 38.2% 35%); }
+  .bigstar:nth-child(2) { width: 78px; height: 78px; margin-top: -10px; }
+  .bigstar.on { background: linear-gradient(#fff07a, #ffb703); animation: starpop .45s cubic-bezier(.3, 1.8, .5, 1); }
+  @keyframes starpop { 0% { transform: scale(0) rotate(-40deg); } 100% { transform: scale(1) rotate(0); } }
+  .newpal { display: flex; align-items: center; gap: 12px; background: #fff6d6; border-radius: 18px; padding: 6px 14px 6px 6px; margin: 0 auto 14px; max-width: 300px; text-align: left; animation: starpop .5s .9s both; }
+  .newpal.hidden { display: none; }
+  .newpal canvas { width: 86px; height: 86px; }
+  .newpal small { display: block; color: #e08a00; font-weight: 900; font-size: 15px; }
+  .newpal b { font-size: 24px; }
+  .lreason { font-weight: 800; color: var(--sub); font-size: 18px; margin-bottom: 12px; }
+  .lprog { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 16px; font-weight: 900; font-size: 18px; }
+  .pbar { width: 180px; height: 12px; border-radius: 6px; background: #e3e9f7; overflow: hidden; }
+  .pbar i { display: block; height: 100%; background: linear-gradient(90deg, #7df9ff, #ffd23f); border-radius: 6px; }
+
+  .shead { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; }
+  .shead h2 { flex: 1; margin: 0; color: #fff; font-size: 28px; font-weight: 900; text-shadow: 0 3px 0 rgba(30, 30, 80, .5); }
+  .iconbtn { pointer-events: auto; width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .55); background: rgba(30, 30, 80, .45);
+    color: #fff; font-size: 30px; font-weight: 900; cursor: pointer; display: grid; place-items: center; line-height: 1; padding: 0 0 4px; }
+
+  .mapwrap { flex: 1; width: 100%; max-width: 460px; overflow-y: auto; margin-top: 10px; border-radius: 24px; background: rgba(255, 255, 255, .16); touch-action: pan-y; scrollbar-width: none; }
+  .mapwrap::-webkit-scrollbar { display: none; }
+  .mapin { position: relative; width: 100%; }
+  .mapin .path { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .mapin .path polyline { fill: none; stroke: rgba(255, 255, 255, .8); stroke-width: 6; stroke-dasharray: 2 14; stroke-linecap: round; }
+  .node { position: absolute; width: 66px; height: 66px; margin-left: -33px; border-radius: 50%; border: 0; cursor: pointer; font-weight: 900; color: #fff; font-size: 26px;
+    background: linear-gradient(#ffb04a, #ff8a3d); box-shadow: 0 6px 0 #c95f1e, 0 10px 16px rgba(30, 30, 80, .3); }
+  .node b { position: relative; top: -2px; text-shadow: 0 2px 0 rgba(120, 50, 0, .4); }
+  .node.done { background: linear-gradient(#7ee88f, #51cf66); box-shadow: 0 6px 0 #2f9e44, 0 10px 16px rgba(30, 30, 80, .3); }
+  .node.cur { background: linear-gradient(#ffe066, #ffc21a); box-shadow: 0 6px 0 #d18f00, 0 0 0 6px rgba(255, 255, 255, .6), 0 10px 22px rgba(30, 30, 80, .35); animation: pulse 1.2s ease-in-out infinite; color: #7a4a00; }
+  .node.cur b { text-shadow: none; }
+  .node.locked { background: linear-gradient(#b8c2dc, #9aa6c6); box-shadow: 0 6px 0 #7884a6; color: #eef2fb; }
+  .node .nst { position: absolute; left: 50%; bottom: -16px; transform: translateX(-50%); font-size: 16px; white-space: nowrap; }
+  .node .nst .star.off { background: rgba(255, 255, 255, .55); }
+  .node .gift { position: absolute; right: -10px; top: -10px; font-size: 22px; animation: bob 1.6s ease-in-out infinite; }
+  .chap { position: absolute; left: 50%; transform: translateX(-50%); background: #fff; color: var(--ink); font-weight: 900; font-size: 16px; padding: 7px 16px; border-radius: 999px;
+    box-shadow: 0 4px 0 rgba(20, 20, 70, .2); white-space: nowrap; }
+
+  .preview { width: 100%; max-width: 460px; flex: 1; min-height: 150px; position: relative; }
+  #pv { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .pname { position: absolute; bottom: 4px; left: 0; right: 0; text-align: center; color: #fff; font-weight: 900; font-size: 28px; text-shadow: 0 3px 0 rgba(30, 30, 80, .55); }
+  .plock { position: absolute; top: 8px; left: 0; right: 0; text-align: center; color: #fff; font-weight: 900; font-size: 18px; text-shadow: 0 2px 0 rgba(30, 30, 80, .5); }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; width: 100%; max-width: 460px; margin: 8px 0 6px; }
+  .kcard { pointer-events: auto; background: rgba(255, 255, 255, .93); border-radius: 14px; padding: 2px 2px 5px; text-align: center; cursor: pointer;
+    border: 3px solid transparent; box-shadow: 0 4px 0 rgba(20, 20, 70, .2); transition: transform .12s; }
+  .kcard canvas { width: 100%; aspect-ratio: 1; display: block; }
+  .kcard .kn { font-size: 12px; font-weight: 900; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kcard.locked { background: rgba(225, 230, 248, .9); }
+  .kcard.locked .kn { color: var(--sub); }
+  .kcard.sel { border-color: var(--gold); transform: translateY(-4px); }
+
+  .pcard { display: flex; flex-direction: column; gap: 14px; align-items: center; max-width: 340px; }
+  .pcard h2 { margin: 0 0 4px; font-size: 40px; font-weight: 900; }
+
+  #btnPause { position: absolute; left: max(12px, env(safe-area-inset-left)); top: max(12px, env(safe-area-inset-top)); display: flex; gap: 5px; padding: 0; }
+  #btnPause span { width: 5px; height: 17px; background: #fff; border-radius: 2px; }
+  #btnPause.hidden { display: none; }
+
+  #banner { position: absolute; left: 0; right: 0; top: 24%; text-align: center; color: #fff; opacity: 0; pointer-events: none; }
+  #banner small { display: block; font-weight: 900; font-size: 19px; color: var(--gold); text-shadow: 0 2px 0 rgba(30, 30, 80, .6); }
+  #banner b { display: block; font-weight: 900; font-size: min(44px, 9.5vw); text-shadow: 0 4px 0 rgba(30, 30, 80, .6), 0 0 30px rgba(255, 255, 255, .45); }
+  #banner span { display: inline-block; margin-top: 8px; background: rgba(30, 30, 80, .5); padding: 6px 16px; border-radius: 999px; font-weight: 900; font-size: 18px; }
+  #banner.show { animation: banner 2.8s ease forwards; }
+  @keyframes banner { 0% { opacity: 0; transform: scale(.6); } 12% { opacity: 1; transform: scale(1.08); } 20% { transform: scale(1); } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-20px) scale(1.06); } }
+
+  @media (max-height: 640px) {
+    .logo { font-size: min(70px, 15vw); }
+    .btn.play { font-size: 26px; }
+    .bigstar { width: 48px; height: 48px; } .bigstar:nth-child(2) { width: 58px; height: 58px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <button id="btnPause" class="iconbtn hidden" aria-label="Pause"><span></span><span></span></button>
+  <div id="banner"><small id="bnSmall"></small><b id="bnName"></b><span id="bnExtra"></span></div>
+
+  <section id="menu" class="screen hidden">
+    <div class="topbar"><div class="pill"><i class="star"></i><span id="mStars">0</span></div></div>
+    <h1 class="logo" aria-label="Tower Pals">
+      <span class="w"><span style="color:#ffb04a">T</span><span style="color:#ff6fa3;animation-delay:.12s">O</span><span style="color:#5fd068;animation-delay:.24s">W</span><span style="color:#4fb3ff;animation-delay:.36s">E</span><span style="color:#ffd23f;animation-delay:.48s">R</span></span>
+      <span class="w"><span style="color:#ff6fa3;animation-delay:.2s">P</span><span style="color:#ffb04a;animation-delay:.32s">A</span><span style="color:#4fb3ff;animation-delay:.44s">L</span><span style="color:#5fd068;animation-delay:.56s">S</span></span>
+    </h1>
+    <p class="sub" id="tSub"></p>
+    <button class="btn play pulse" id="btnPlay"><span id="tPlay"></span><small id="tPlayLv"></small></button>
+    <div class="row">
+      <button class="btn ghost" id="btnMap">🗺️ <span id="tMap"></span></button>
+      <button class="btn ghost" id="btnPals">🐾 <span id="tPals"></span> <b id="mPals"></b></button>
+    </div>
+    <div class="grow"></div>
+    <div class="credit">Made by <b>Abrordev</b></div>
+  </section>
+
+  <section id="map" class="screen dim hidden">
+    <div class="shead"><button class="iconbtn" id="btnMapBack" aria-label="Back">‹</button><h2 id="tMap2"></h2><div class="pill"><i class="star"></i><span id="mapStars">0</span></div></div>
+    <div class="mapwrap" id="mapWrap"><div class="mapin" id="mapIn"></div></div>
+  </section>
+
+  <section id="pals" class="screen dim hidden">
+    <div class="shead"><button class="iconbtn" id="btnPalsBack" aria-label="Back">‹</button><h2 id="tPals2"></h2><div class="pill" id="palCount"></div></div>
+    <div class="preview"><canvas id="pv"></canvas><div class="plock" id="pLock"></div><div class="pname" id="pName"></div></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="win" class="screen hidden">
+    <div class="grow"></div>
+    <div class="card">
+      <div class="stripe"></div>
+      <div class="olabel" id="wLevel"></div>
+      <h2 class="wtitle" id="tComplete"></h2>
+      <div class="stars3"><i class="bigstar" id="ws1"></i><i class="bigstar" id="ws2"></i><i class="bigstar" id="ws3"></i></div>
+      <div class="newpal hidden" id="wPal"><canvas id="wPalCv"></canvas><div><small id="tNewPal"></small><b id="wPalName"></b></div></div>
+      <button class="btn play pulse" id="btnNext"></button>
+      <div class="row2">
+        <button class="btn soft" id="btnReplay" aria-label="Replay">↻</button>
+        <button class="btn soft" id="btnWinMap">🗺️ <span id="tMap3"></span></button>
+      </div>
+    </div>
+  </section>
+
+  <section id="lose" class="screen dim hidden">
+    <div class="grow"></div>
+    <div class="card">
+      <div class="stripe"></div>
+      <h2 class="wtitle" id="tFail"></h2>
+      <div class="lreason" id="lReason"></div>
+      <div class="lprog">🏁 <span class="pbar"><i id="lBar"></i></span><span id="lPct"></span></div>
+      <button class="btn play pulse" id="btnRetry"></button>
+      <div class="row2"><button class="btn soft" id="btnLoseMap">🗺️ <span id="tMap4"></span></button></div>
+    </div>
+    <div class="grow"></div>
+  </section>
+
+  <section id="pauseScr" class="screen dim hidden">
+    <div class="grow"></div>
+    <div class="card pcard">
+      <h2 id="tPaused"></h2>
+      <button class="btn play" id="btnResume"></button>
+      <button class="btn soft" id="btnPauseMap">🗺️ <span id="tMap5"></span></button>
+    </div>
+    <div class="grow"></div>
+  </section>
+</div>
+<script src="util.js"></script>
+<script src="i18n.js"></script>
+<script src="audio.js"></script>
+<script src="pets.js"></script>
+<script src="scene.js"></script>
+<script src="game.js"></script>
+</body>
+</html>

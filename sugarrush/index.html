@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Sugar Rush</title>
+<!-- YouTube Playables SDK: o'yin kodidan oldin yuklanishi SHART -->
+<script src="https://www.youtube.com/game_api/v1"></script>
+<style>
+  :root {
+    --ink: #3a1240; --cream: #fff6fb;
+    --p1: #ffc2ea; --p2: #ff5fb4; --p3: #d6237f;
+    --g1: #9cf58a; --g2: #3fcf5f; --g3: #1f9a45;
+    --v1: #c9a2ff; --v2: #8e5cff; --v3: #5b2fd1;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #ffd3e8; font-family: var(--font); }
+  body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #stage, #stage canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #ui { position: fixed; inset: 0; pointer-events: none; color: var(--cream); }
+  #ui .screen, #ui button, #ui .tap { pointer-events: auto; }
+  .hidden { display: none !important; }
+  /* HUD menyuda ham chizilgan holda turadi (deyarli shaffof), shuning uchun o'yin boshida qotmaydi */
+  #hud { position: absolute; inset: 0; }
+  #hud.off { opacity: .001; }
+
+  /* Matn uslubi: qalin, konturli multfilm yozuvi */
+  .toon { font-weight: 900; color: #fff; paint-order: stroke fill; -webkit-text-stroke: 6px var(--ink);
+    text-shadow: 0 4px 0 var(--ink), 0 8px 18px rgba(58,18,64,.35); letter-spacing: .01em; }
+
+  /* Tugmalar: hajmli, yaltiroq konfet */
+  .btn { position: relative; border: 4px solid var(--ink); border-radius: 22px; padding: 14px 28px 18px; cursor: pointer; white-space: nowrap; max-width: 100%;
+    font: 900 26px/1 var(--font); color: #fff; paint-order: stroke fill; -webkit-text-stroke: 5px var(--ink);
+    box-shadow: inset 0 -8px 0 rgba(0,0,0,.2), 0 6px 0 var(--ink), 0 12px 24px rgba(58,18,64,.35);
+    transition: transform .08s ease, box-shadow .08s ease; overflow: hidden; }
+  .btn::after { content: ""; position: absolute; left: 10%; right: 10%; top: 6px; height: 34%; border-radius: 999px;
+    background: linear-gradient(rgba(255,255,255,.6), rgba(255,255,255,0)); pointer-events: none; }
+  .btn:active { transform: translateY(5px); box-shadow: inset 0 -4px 0 rgba(0,0,0,.2), 0 1px 0 var(--ink), 0 4px 10px rgba(58,18,64,.35); }
+  .btn.pink { background: linear-gradient(var(--p1), var(--p2) 55%, var(--p3)); }
+  .btn.green { background: linear-gradient(var(--g1), var(--g2) 55%, var(--g3)); }
+  .btn.purple { background: linear-gradient(var(--v1), var(--v2) 55%, var(--v3)); }
+  .btn.big { font-size: clamp(24px, 7.5vw, 40px); padding: 18px clamp(24px, 8vw, 64px) 24px; border-radius: 28px; -webkit-text-stroke: 7px var(--ink); }
+  .btn.big.pulse { animation: pulse 1.2s ease-in-out infinite; }
+  .btn.small { font-size: 20px; padding: 10px 22px 14px; border-radius: 18px; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+
+  .pill { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(#a24fd8, #6a22a8); border: 3px solid var(--ink);
+    border-radius: 999px; padding: 6px 14px 6px 8px; font: 900 20px/1 var(--font); box-shadow: 0 4px 0 var(--ink); }
+  .coin { width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--ink); flex: none;
+    background: radial-gradient(circle at 35% 30%, #fff6b0 0 18%, #ffd43b 20% 55%, #e8a10c 58%); }
+  .cube { width: 26px; height: 26px; border: 3px solid var(--ink); border-radius: 7px; flex: none; transform: rotate(-8deg);
+    background: linear-gradient(135deg, #ff7ab8, #ffb22c 35%, #6ee36a 65%, #3fc5ff); box-shadow: inset 3px 3px 0 rgba(255,255,255,.55); }
+
+  /* HUD */
+  #hud .top { position: absolute; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; gap: 10px; }
+  #hud .bar { flex: 1; height: 22px; border: 3px solid var(--ink); border-radius: 999px; background: #6a2a78; position: relative; overflow: visible; box-shadow: 0 4px 0 var(--ink); }
+  /* Bar va nuqta faqat siljitiladi (kattalashtirilmaydi): brauzer ularni qayta rasterlamaydi */
+  #hud .clip { position: absolute; inset: 0; border-radius: 999px; overflow: hidden; }
+  #hud .fill, #hud .lava { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 999px; transform: translateX(-100%); will-change: transform; }
+  #hud .fill { background: linear-gradient(#b8ffef, #3fd9c0); }
+  #hud .lava { background: linear-gradient(#b0703a, #5a2d14); }
+  #hud .track { position: absolute; inset: 0; }
+  #hud .mover { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; will-change: transform; }
+  #hud .mover i { position: absolute; left: 0; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 3px solid var(--ink);
+    background: radial-gradient(circle at 35% 30%, #ffe0ef, #ff5fb4 60%); }
+  #hud .flag { position: absolute; right: -8px; top: -5px; width: 24px; height: 26px; border: 3px solid var(--ink); border-radius: 4px;
+    background: repeating-conic-gradient(#ff3f8e 0 25%, #fff 0 50%) 0 0 / 10px 10px; box-shadow: 0 3px 0 var(--ink); }
+  /* HUD matni tez-tez o'zgaradi: xira soya o'rniga arzon qattiq soya */
+  #hud .toon { -webkit-text-stroke: 5px var(--ink); text-shadow: 0 3px 0 var(--ink); }
+  #blocks { position: absolute; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translateX(-50%); font-size: 30px; padding: 8px 20px 8px 12px; }
+  #blocks .cube { width: 34px; height: 34px; }
+  #blocks.bump { animation: bump .25s ease; }
+  #blocks.low { background: linear-gradient(#ff5a7a, #b3123e); }
+  @keyframes bump { 40% { transform: translateX(-50%) scale(1.25); } }
+  #warn { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .2s; will-change: opacity;
+    background: radial-gradient(ellipse at 50% 125%, rgba(90,40,15,.8), rgba(90,40,15,0) 60%); }
+  #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 60%, rgba(90,20,90,.32) 100%); }
+  #hint { position: absolute; left: 0; right: 0; top: 34%; text-align: center; transition: opacity .4s; }
+  #hint p { margin: 0; font-size: 34px; }
+  #hint small { display: block; margin-top: 10px; font-size: 20px; }
+  .hand { width: 80px; height: 80px; margin: 0 auto 6px; font-size: 64px; line-height: 80px; text-align: center;
+    filter: drop-shadow(0 4px 0 var(--ink)) drop-shadow(0 0 2px var(--ink)); animation: swipe 1.4s ease-in-out infinite; }
+  .hand::before { content: "👆"; }
+  @keyframes swipe { 0%,100% { transform: translateX(-70px); } 50% { transform: translateX(70px); } }
+  #toast { position: absolute; left: 0; right: 0; top: 22%; text-align: center; font-size: 44px; opacity: 0; transform: scale(.6); transition: all .25s cubic-bezier(.2,1.6,.4,1); }
+  #toast.show { opacity: 1; transform: scale(1); }
+  /* Emoji shriftini oldindan chizdirib qo'yish (birinchi ko'rinishida qotmasligi uchun) */
+  .warm { position: fixed; left: 0; top: 0; opacity: .01; pointer-events: none; line-height: 1; }
+
+  /* Ekranlar */
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; }
+  #menu .title { margin: max(8vh, 54px) 0 0; display: flex; flex-direction: column; align-items: center; line-height: .86; font-weight: 900; animation: float 3s ease-in-out infinite; }
+  #menu .title .w { position: relative; display: block; font-size: clamp(60px, 16vw, 124px); color: var(--ink); -webkit-text-stroke: 14px var(--ink);
+    text-shadow: 0 10px 0 var(--ink), 0 18px 30px rgba(58,18,64,.45); }
+  #menu .title .w b { position: absolute; inset: 0; font-weight: inherit; -webkit-text-stroke: 0; text-shadow: none;
+    background: linear-gradient(#ffffff, #ffd1f0 30%, #ff6fc0 65%, #d62d86); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  #menu .title .w:nth-child(2) b { background: linear-gradient(#ffffff, #c8f6ff 30%, #5fc9ff 65%, #2f7fe0); -webkit-background-clip: text; background-clip: text; }
+  #menu .title .w:nth-child(1) { transform: rotate(-4deg); }
+  #menu .title .w:nth-child(2) { transform: rotate(3deg) translateX(18px); }
+  @keyframes float { 50% { transform: translateY(-10px); } }
+  #menu .sub { margin: 16px 0 0; font-size: 24px; text-align: center; padding: 0 12px; }
+  #menu .credit { position: absolute; bottom: max(8px, env(safe-area-inset-bottom)); font-size: 13px; font-weight: 800; color: rgba(255,255,255,.9); text-shadow: 0 1px 2px rgba(60,20,70,.6); letter-spacing: .03em; }
+  #menu .credit b { color: #fff; }
+  #menu .bottom { position: absolute; bottom: max(36px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 16px; }
+  #menu .lvlbig { font-size: 28px; }
+  .corner { position: absolute; top: max(14px, env(safe-area-inset-top)); right: 14px; }
+
+  .panel { margin: auto; width: min(92vw, 440px); background: linear-gradient(#fff9fc, #ffe0f0); color: var(--ink); border: 5px solid var(--ink); border-radius: 34px;
+    box-shadow: 0 10px 0 var(--ink), 0 24px 50px rgba(58,18,64,.45); padding: 26px 22px 30px; text-align: center; position: relative; animation: popin .45s cubic-bezier(.2,1.6,.4,1); }
+  .panel h2 { margin: -64px 0 10px; font-size: 38px; line-height: 1.05; }
+  .panel .row { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0 22px; font: 900 44px/1 var(--font); }
+  .panel .row .coin { width: 44px; height: 44px; }
+  .panel .bonus { margin: -12px 0 18px; font-size: 22px; color: #ffe066; }
+  .panel .bonus:empty { display: none; }
+  .panel .mult { display: inline-block; background: linear-gradient(#7ad7ff, #2f8fe0); color: #fff; border: 4px solid var(--ink); border-radius: 18px; padding: 6px 18px; font: 900 34px/1 var(--font);
+    transform: rotate(-4deg); box-shadow: 0 5px 0 var(--ink); margin-bottom: 6px; }
+  .panel .meter { height: 26px; border: 4px solid var(--ink); border-radius: 999px; background: #f6d3e6; overflow: hidden; margin: 14px 8px 24px; }
+  .panel .meter div { height: 100%; background: linear-gradient(#ff9ad0, #ff4fa8); width: 0; transition: width .8s ease; }
+  @keyframes popin { from { transform: scale(.5); opacity: 0; } }
+  .dim { background: rgba(58,18,64,.45); }
+
+  /* Do'kon */
+  #shop { justify-content: flex-end; }
+  #shop .sheet { width: 100%; max-width: 640px; background: linear-gradient(#fff9fc, #ffe0f0); color: var(--ink); border: 5px solid var(--ink); border-bottom: 0;
+    border-radius: 34px 34px 0 0; padding: 18px 16px max(18px, env(safe-area-inset-bottom)); box-shadow: 0 -10px 40px rgba(58,18,64,.4); max-height: 58vh; display: flex; flex-direction: column; }
+  #shop .tabs { display: flex; gap: 10px; margin-bottom: 14px; }
+  #shop .tabs button { flex: 1; }
+  #shop .tabs button:not(.on) { filter: grayscale(.7) brightness(.9); }
+  #shop .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; overflow-y: auto; padding: 4px 4px 10px; }
+  .card { background: #fff; border: 4px solid var(--ink); border-radius: 22px; padding: 12px 10px; text-align: center; box-shadow: 0 5px 0 var(--ink); cursor: pointer; }
+  .card.sel { background: #e8fff4; outline: 4px solid var(--g2); }
+  .card .av { width: 64px; height: 64px; border-radius: 50%; border: 4px solid var(--ink); margin: 0 auto 6px; }
+  .card b { display: block; font-size: 18px; }
+  .card .lvl { font-size: 14px; color: #9a3f7a; font-weight: 800; }
+  .card .price { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font: 900 18px/1 var(--font); }
+  .card .price .coin { width: 20px; height: 20px; border-width: 2px; }
+  .card.cant { opacity: .55; }
+  .card .ico { font-size: 40px; line-height: 64px; height: 64px; }
+  /* Qahramon rasmi: tayyor bo'lguncha rangli doira ko'rinadi */
+  .card .thumb { display: block; width: 92px; height: 92px; margin: 0 auto 4px; border-radius: 20px; object-fit: contain;
+    background: radial-gradient(circle at 50% 42%, var(--a) 0 30%, var(--b) 32% 46%, #ffeaf5 48%); }
+  .card .thumb:not(.ready) { content-visibility: auto; }
+  .card .thumb.ready { background: radial-gradient(circle at 50% 60%, #fff 0, #ffe3f1 70%); }
+  .card.locked .thumb.ready { filter: saturate(.75) brightness(.95); }
+  .card .lvl:empty { display: none; }
+  /* Tanlangan qahramon paneli: nomi va sotib olish / tanlash tugmasi */
+  .pick { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 4px 12px; }
+  .pick b { font-size: 24px; }
+  .pick .btn { display: inline-flex; align-items: center; gap: 6px; }
+  .pick .btn .coin { width: 22px; height: 22px; border-width: 2px; }
+  .btn.off { filter: grayscale(.75) brightness(.9); }
+  .btn.shake { animation: shake .35s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+  #shop .close { position: absolute; top: max(14px, env(safe-area-inset-top)); left: 14px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div id="vignette"></div>
+<div class="warm" aria-hidden="true"><span style="font-size:64px">👆</span><span style="font-size:40px">🍬🧲🐢</span><span style="font-size:22px">🎁</span></div>
+<div id="ui">
+  <div id="hud" class="off">
+    <div class="top">
+      <div class="pill toon" id="lvl">1</div>
+      <div class="bar"><div class="clip"><div class="lava" id="lavabar"></div><div class="fill" id="prog"></div></div><div class="track"><div class="mover" id="dot"><i></i></div></div><div class="flag"></div></div>
+      <div class="pill toon"><i class="coin"></i><span id="coins">0</span></div>
+    </div>
+    <div id="warn"></div>
+    <div id="hint"><div class="hand"></div><p class="toon" data-t="swipe"></p><small class="toon" data-t="collect"></small></div>
+    <div id="toast" class="toon"></div>
+    <div id="blocks" class="pill toon"><i class="cube"></i><span id="bcount">0</span></div>
+  </div>
+
+  <div id="menu" class="screen">
+    <div class="corner pill toon"><i class="coin"></i><span class="coinsv">0</span></div>
+    <h1 class="title"><span class="w">SUGAR<b>SUGAR</b></span><span class="w">RUSH<b>RUSH</b></span></h1>
+    <p class="sub toon" data-t="subtitle"></p>
+    <div class="bottom">
+      <div class="lvlbig toon"><span data-t="level"></span> <span id="menulvl">1</span></div>
+      <button class="btn big pink pulse" id="btnPlay" data-t="play"></button>
+      <button class="btn small purple" id="btnShop" data-t="shop"></button>
+    </div>
+    <div class="credit">Made by <b>Abrordev</b></div>
+  </div>
+
+  <div id="shop" class="screen hidden">
+    <button class="btn small pink close" id="btnBack" data-t="back"></button>
+    <div class="corner pill toon"><i class="coin"></i><span class="coinsv">0</span></div>
+    <div class="sheet">
+      <div class="tabs">
+        <button class="btn small green on" id="tabHeroes" data-t="heroes"></button>
+        <button class="btn small green" id="tabUp" data-t="upgrades"></button>
+      </div>
+      <div class="pick" id="pickBar"><b id="pickName"></b><button class="btn small pink" id="btnPick"></button></div>
+      <div class="list" id="shopList"></div>
+    </div>
+  </div>
+
+  <div id="win" class="screen dim hidden">
+    <div class="panel">
+      <h2 class="toon" data-t="complete"></h2>
+      <div class="mult" id="winMult">x1</div>
+      <div class="row"><i class="coin"></i><span id="winCoins">0</span></div>
+      <div class="bonus toon" id="winBonus"></div>
+      <button class="btn big green" id="btnNext" data-t="next"></button>
+    </div>
+  </div>
+
+  <div id="lose" class="screen dim hidden">
+    <div class="panel">
+      <h2 class="toon" id="loseTitle"></h2>
+      <div style="font-weight:900;font-size:20px;margin-top:6px" data-t="progress"></div>
+      <div class="meter"><div id="loseMeter"></div></div>
+      <button class="btn big pink" id="btnRetry" data-t="retry"></button>
+    </div>
+  </div>
+
+  <div id="pause" class="screen dim hidden tap">
+    <div style="margin:auto;text-align:center">
+      <div class="toon" style="font-size:60px" data-t="paused"></div>
+      <div class="toon" style="font-size:24px;margin-top:12px" data-t="resume"></div>
+    </div>
+  </div>
+</div>
+<!-- GLTFLoader "three" nomini so'raydi: uni o'yindagi bitta three.js nusxasiga yo'naltiramiz -->
+<script type="importmap">{ "imports": { "three": "./three.module.min.js" } }</script>
+<script type="module" src="game.js"></script>
+<script>
+  // file:// orqali ochilganda modullar bloklanadi, shuning uchun tushunarli xabar ko'rsatamiz
+  if (location.protocol === 'file:') {
+    document.getElementById('ui').innerHTML = '<div class="screen" style="justify-content:center;text-align:center;padding:24px">' +
+      '<div class="toon" style="font-size:26px;max-width:560px;line-height:1.4">This game must be opened through a web server.<br><br>' +
+      'O\'yinni server orqali oching:<br>python -m http.server 8765 &rarr; http://127.0.0.1:8765/sugarrush/</div></div>';
+  }
+</script>
+</body>
+</html>

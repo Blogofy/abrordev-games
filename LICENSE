@@ -1,0 +1,9 @@
+Copyright (c) 2026 Abrordev. All rights reserved.
+
+The games in this repository (Sugar Rush, Kite, Tower Pals), including their code, designs,
+artwork drawn in code, music and sound, are the property of Abrordev. No permission is granted
+to copy, modify, distribute or publish them without written permission from the author.
+
+Third-party components are excluded from this notice and remain under their own licenses:
+- three.js (sugarrush/three.module.min.js, sugarrush/lib/) — MIT License, Copyright 2010-2024 three.js authors.
+- "Ultimate Monsters" 3D models by Quaternius (sugarrush/models/) — CC0 1.0 Universal (public domain).

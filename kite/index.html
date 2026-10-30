@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Kite</title>
+<!-- YouTube Playables SDK: o'yin kodidan oldin yuklanishi SHART -->
+<script src="https://www.youtube.com/game_api/v1"></script>
+<style>
+  :root { --ink: #2b2350; --sub: #7a6bb0; --green: #06d6a0; --green2: #049e76; --pink: #ef476f; --gold: #ffd23f; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1033; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif; }
+  body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  #game { display: block; width: 100%; height: 100%; }
+  #ui { position: fixed; inset: 0; pointer-events: none; }
+  button { font: inherit; }
+
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; pointer-events: auto;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom)); transition: opacity .25s, transform .25s; }
+  .screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; transform: scale(.97); }
+  .grow { flex: 1; }
+  .dim { background: rgba(12, 8, 40, .38); }
+
+  .star { display: inline-block; width: 1em; height: 1em; vertical-align: -.14em; margin: 0 .08em;
+    background: linear-gradient(#fff07a, #ffb703); clip-path: polygon(50% 0, 61.8% 35%, 98% 35.5%, 69% 57.5%, 79.5% 91.5%, 50% 71%, 20.5% 91.5%, 31% 57.5%, 2% 35.5%, 38.2% 35%); }
+
+  .topbar { width: 100%; max-width: 460px; display: flex; justify-content: flex-end; min-height: 44px; }
+  .pill { display: inline-flex; align-items: center; gap: 4px; background: rgba(20, 14, 50, .45); color: #fff; font-weight: 900; font-size: 20px;
+    padding: 6px 14px 6px 10px; border-radius: 999px; border: 2px solid rgba(255, 255, 255, .35); }
+
+  .logo { margin: 2vh 0 0; font-size: min(112px, 25vw); font-weight: 900; letter-spacing: .03em; line-height: 1; display: flex; gap: .05em; }
+  .logo span { display: inline-block; animation: bob 2.4s ease-in-out infinite;
+    text-shadow: 0 .07em 0 #2b2350, .035em .035em 0 #2b2350, -.035em .035em 0 #2b2350, .035em -.03em 0 #2b2350, -.035em -.03em 0 #2b2350, 0 .16em .12em rgba(20, 10, 60, .35); }
+  .logo span:nth-child(1) { color: #ef476f; }
+  .logo span:nth-child(2) { color: #ffd166; animation-delay: .15s; }
+  .logo span:nth-child(3) { color: #4cc9f0; animation-delay: .3s; }
+  .logo span:nth-child(4) { color: #06d6a0; animation-delay: .45s; }
+  @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
+  .sub { margin: 8px 0 0; color: #fff; font-weight: 900; font-size: 22px; text-shadow: 0 2px 0 rgba(30, 20, 70, .55); }
+
+  .card { background: #fff; border-radius: 24px; width: 100%; max-width: 440px; color: var(--ink);
+    box-shadow: 0 7px 0 rgba(20, 10, 60, .25), 0 14px 30px rgba(20, 10, 60, .25); }
+  .mcard { padding: 10px 14px 6px; margin-bottom: 14px; background: rgba(255, 255, 255, .93); }
+  .mhead { display: flex; justify-content: space-between; font-weight: 900; font-size: 14px; color: var(--sub); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px; }
+  .mhead .rank { color: #e09a00; }
+  .mis { display: grid; grid-template-columns: 24px 1fr auto; column-gap: 8px; row-gap: 3px; align-items: center; padding: 7px 0; border-top: 1px solid #efeaff; font-size: 15px; font-weight: 700; line-height: 1.2; }
+  .mis:first-child { border-top: 0; }
+  .mis .chk { grid-row: 1 / span 2; width: 22px; height: 22px; border-radius: 50%; border: 3px solid #d5ccf5; display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 900; }
+  .mis .mr { font-weight: 900; color: #e09a00; white-space: nowrap; font-size: 14px; }
+  .mis .mbar { height: 6px; border-radius: 3px; background: #efeaff; overflow: hidden; }
+  .mis .mbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, #ffd23f, #ff9f1c); }
+  .mis .mn { font-size: 12px; font-weight: 900; color: var(--sub); text-align: right; }
+  .mis.done .chk { background: var(--green); border-color: var(--green); }
+  .mis.done .mbar i { background: var(--green); }
+  .mis.done .mt { color: #8f86b8; }
+  .mis.fresh { animation: fresh .9s ease; }
+  @keyframes fresh { 0% { background: #fff4c2; transform: scale(1.03); } 100% { background: transparent; transform: none; } }
+
+  .btn { pointer-events: auto; border: 0; cursor: pointer; font-weight: 900; color: #fff; border-radius: 999px; transition: transform .08s, filter .2s; }
+  .btn:active { transform: translateY(3px) scale(.98); }
+  .btn.play { width: 100%; max-width: 340px; font-size: 32px; padding: 13px 0 15px; background: linear-gradient(#34f0bd, #06d6a0);
+    box-shadow: 0 7px 0 var(--green2), 0 12px 22px rgba(0, 60, 40, .3); text-shadow: 0 2px 0 rgba(0, 90, 60, .45); }
+  .btn.pulse { animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  .btn.ghost { font-size: 18px; padding: 10px 18px; background: rgba(20, 14, 50, .45); border: 2px solid rgba(255, 255, 255, .4); display: inline-flex; align-items: center; gap: 6px; }
+  .btn.soft { font-size: 18px; padding: 10px 18px; background: #efeaff; color: var(--ink); box-shadow: 0 4px 0 #d5cdf5; display: inline-flex; align-items: center; gap: 6px; }
+  .btn.off { filter: grayscale(.75) brightness(.92); }
+  .btn.shake { animation: shake .35s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-7px); } 40%, 80% { transform: translateX(7px); } }
+  .row { display: flex; align-items: center; justify-content: space-between; width: 100%; max-width: 340px; margin-top: 16px; gap: 10px; }
+  .best { color: #fff; font-weight: 900; font-size: 18px; text-shadow: 0 2px 0 rgba(30, 20, 70, .5); }
+  .best b { color: var(--gold); }
+  .credit { margin-top: 12px; font-size: 13px; font-weight: 800; color: rgba(255, 255, 255, .85); text-shadow: 0 1px 2px rgba(20, 10, 60, .6); letter-spacing: .03em; }
+  .credit b { color: #fff; }
+
+  .ocard { padding: 22px 18px 18px; text-align: center; position: relative; overflow: hidden; }
+  .stripe { position: absolute; left: 0; right: 0; top: 0; height: 10px; background: linear-gradient(90deg, #ef476f 25%, #ffd166 25% 50%, #4cc9f0 50% 75%, #06d6a0 75%); }
+  .olabel { font-weight: 900; color: var(--sub); font-size: 17px; letter-spacing: .06em; text-transform: uppercase; margin-top: 4px; }
+  .oscore { font-weight: 900; font-size: 70px; line-height: 1.05; }
+  .badge { display: inline-block; margin: 2px 0 8px; font-weight: 900; font-size: 18px; color: var(--sub); }
+  .badge.new { background: var(--pink); color: #fff; padding: 6px 16px; border-radius: 999px; animation: wob 1s ease-in-out infinite; }
+  @keyframes wob { 0%, 100% { transform: rotate(-3deg) scale(1); } 50% { transform: rotate(-3deg) scale(1.07); } }
+  .ostats { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 20px; font-weight: 900; font-size: 19px; margin: 4px 0 2px; }
+  .oworld { font-weight: 800; font-size: 15px; color: var(--sub); margin-bottom: 8px; }
+  #oList { text-align: left; margin: 0 0 16px; padding: 4px 10px; background: #f8f6ff; border-radius: 16px; }
+  .row2 { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+  .shead { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 460px; }
+  .shead h2 { flex: 1; margin: 0; color: #fff; font-size: 28px; font-weight: 900; text-shadow: 0 3px 0 rgba(30, 20, 70, .5); }
+  .iconbtn { pointer-events: auto; width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .5); background: rgba(20, 14, 50, .45);
+    color: #fff; font-size: 30px; font-weight: 900; cursor: pointer; display: grid; place-items: center; line-height: 1; padding: 0 0 4px; }
+  .preview { width: 100%; max-width: 460px; flex: 1; min-height: 140px; position: relative; }
+  #pv { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .pname { position: absolute; bottom: 2px; left: 0; right: 0; text-align: center; color: #fff; font-weight: 900; font-size: 28px; text-shadow: 0 3px 0 rgba(30, 20, 70, .55); }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; max-width: 460px; margin: 8px 0 14px; }
+  .kcard { pointer-events: auto; background: rgba(255, 255, 255, .93); border-radius: 16px; padding: 2px 2px 6px; text-align: center; cursor: pointer;
+    border: 3px solid transparent; box-shadow: 0 4px 0 rgba(20, 10, 60, .22); transition: transform .12s, border-color .12s; }
+  .kcard canvas { width: 100%; aspect-ratio: 1; display: block; }
+  .kcard .kn { font-size: 13px; font-weight: 900; color: var(--ink); }
+  .kcard .kp { font-size: 13px; font-weight: 900; color: #e09a00; min-height: 1.2em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kcard.owned .kp { color: var(--green2); }
+  .kcard.locked canvas { filter: saturate(.55) brightness(.92); }
+  .kcard.cur { background: #fff7d6; }
+  .kcard.sel { border-color: var(--gold); transform: translateY(-4px); }
+
+  .pcard { padding: 26px 22px; text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; max-width: 340px; }
+  .pcard h2 { margin: 0 0 4px; font-size: 40px; font-weight: 900; }
+
+  #btnPause { position: absolute; left: max(12px, env(safe-area-inset-left)); top: max(12px, env(safe-area-inset-top)); display: flex; gap: 5px; padding: 0; }
+  #btnPause span { width: 5px; height: 17px; background: #fff; border-radius: 2px; }
+  #btnPause.hidden { display: none; }
+
+  #banner { position: absolute; left: 0; right: 0; top: 25%; text-align: center; color: #fff; opacity: 0; pointer-events: none; }
+  #banner small { display: block; font-weight: 900; font-size: 20px; color: var(--gold); text-shadow: 0 2px 0 rgba(30, 20, 70, .6); }
+  #banner b { display: block; font-weight: 900; font-size: min(46px, 10vw); text-shadow: 0 4px 0 rgba(30, 20, 70, .6), 0 0 30px rgba(255, 255, 255, .45); }
+  #banner.show { animation: banner 2.8s ease forwards; }
+  @keyframes banner { 0% { opacity: 0; transform: scale(.6); } 12% { opacity: 1; transform: scale(1.08); } 20% { transform: scale(1); } 80% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-20px) scale(1.06); } }
+  #toast { position: absolute; left: 50%; top: 19%; transform: translateX(-50%); background: #fff; color: var(--ink); font-weight: 900; font-size: 16px; padding: 10px 16px;
+    border-radius: 16px; box-shadow: 0 6px 0 rgba(20, 10, 60, .25); opacity: 0; white-space: nowrap; pointer-events: none; }
+  #toast.show { animation: toast 2.6s ease forwards; }
+  @keyframes toast { 0% { opacity: 0; transform: translate(-50%, -20px); } 10% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
+
+  @media (max-height: 640px) {
+    .logo { font-size: min(80px, 20vw); }
+    .mis { padding: 4px 0; font-size: 14px; }
+    .btn.play { font-size: 26px; padding: 10px 0 12px; }
+    .oscore { font-size: 54px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="ui">
+  <button id="btnPause" class="iconbtn hidden" aria-label="Pause"><span></span><span></span></button>
+  <div id="banner"><small id="bnSmall"></small><b id="bnName"></b></div>
+  <div id="toast"></div>
+
+  <section id="menu" class="screen hidden">
+    <div class="topbar"><div class="pill"><i class="star"></i><span id="mStars">0</span></div></div>
+    <h1 class="logo" aria-label="Kite"><span>K</span><span>I</span><span>T</span><span>E</span></h1>
+    <p class="sub" id="tSub"></p>
+    <div class="grow"></div>
+    <div class="card mcard">
+      <div class="mhead"><span id="tMissions"></span><span class="rank" id="mRank"></span></div>
+      <div id="mList"></div>
+    </div>
+    <button class="btn play pulse" id="btnPlay"></button>
+    <div class="row">
+      <button class="btn ghost" id="btnKites"><span>🪁</span><span id="tKites"></span></button>
+      <div class="best" id="mBest"></div>
+    </div>
+    <div class="credit">Made by <b>Abrordev</b></div>
+  </section>
+
+  <section id="over" class="screen dim hidden">
+    <div class="grow"></div>
+    <div class="card ocard">
+      <div class="stripe"></div>
+      <div class="olabel" id="tScore"></div>
+      <div class="oscore" id="oScore">0</div>
+      <div class="badge" id="oBadge"></div>
+      <div class="ostats"><span>📏 <b id="oDist">0</b></span><span><i class="star"></i> +<b id="oStars">0</b></span></div>
+      <div class="oworld">🌍 <span id="oWorld"></span></div>
+      <div id="oList"></div>
+      <button class="btn play pulse" id="btnRetry"></button>
+      <div class="row2">
+        <button class="btn soft" id="btnKites2"><span>🪁</span><span id="tKites2"></span></button>
+        <button class="btn soft" id="btnHome"><span>🏠</span><span id="tHome"></span></button>
+      </div>
+    </div>
+    <div class="grow"></div>
+  </section>
+
+  <section id="shop" class="screen dim hidden">
+    <div class="shead"><button class="iconbtn" id="btnBack" aria-label="Back">‹</button><h2 id="tShop"></h2><div class="pill"><i class="star"></i><span id="sStars">0</span></div></div>
+    <div class="preview"><canvas id="pv"></canvas><div class="pname" id="pName"></div></div>
+    <div class="grid" id="grid"></div>
+    <button class="btn play" id="btnAct"></button>
+  </section>
+
+  <section id="pauseScr" class="screen dim hidden">
+    <div class="grow"></div>
+    <div class="card pcard">
+      <h2 id="tPaused"></h2>
+      <button class="btn play" id="btnResume"></button>
+      <button class="btn soft" id="btnHome2"></button>
+    </div>
+    <div class="grow"></div>
+  </section>
+</div>
+<script src="util.js"></script>
+<script src="i18n.js"></script>
+<script src="audio.js"></script>
+<script src="kites.js"></script>
+<script src="world.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
